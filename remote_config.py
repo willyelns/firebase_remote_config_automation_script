@@ -13,7 +13,8 @@ if FILE_PATH is None:
   FILE_PATH = './service-account.json'
 
   if PROJECT_ID is None:
-    raise Exception('PROJECT_ID must be not null, please set a value to the FIREBASE_PROJECT_ID environment variable')
+    # raise Exception('PROJECT_ID must be not null, please set a value to the FIREBASE_PROJECT_ID environment variable')
+    PROJECT_ID = 'memo-receipt'
 
 BASE_URL = 'https://firebaseremoteconfig.googleapis.com'
 REMOTE_CONFIG_ENDPOINT = 'v1/projects/' + PROJECT_ID + '/remoteConfig'
@@ -71,6 +72,24 @@ def _update_all_accepted_version(app_config_list, new_version=None):
     print('id: ', id)
     app_config = app_config_list[id]
     old_version = app_config['accepted']
+    print('> current:', old_version)
+    app_config['accepted'] = new_version
+    print(f'> [Company: {id}] Updating the accepted version from {old_version} version to: {new_version} \n')
+  return app_config_list
+
+def _update_accepted_version_by_o_s(app_config_list, new_version=None):
+  """ Change the accepted version data to a new one restricted by an O.S
+  Args:
+    app_config_list: A dictionary with all the app config list data
+    new_version: A String in the `0.0.0`format that represents the new current version
+  :return: An updated app config list
+  """
+  if new_version is None:
+    raise Exception('new_version must be not null')
+  for id in app_config_list:
+    print('id: ', id)
+    app_config = app_config_list[id]
+    old_version = app_config['accepted`']
     print('> current:', old_version)
     app_config['accepted'] = new_version
     print(f'> [Company: {id}] Updating the accepted version from {old_version} version to: {new_version} \n')
