@@ -1,34 +1,16 @@
 import argparse
 import requests
-import os
 import json
 
+from environment_config import EnvironmentConfig
 from oauth2client.service_account import ServiceAccountCredentials
-
-# PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID')
-# FILE_PATH = os.getenv('FIREBASE_SERVICE_ACCOUNT_FILE')
-
-# if FILE_PATH is None:   
-#     FILE_PATH = './service-account.json'
-# if PROJECT_ID is None:
-#     PROJECT_ID = 'memo-receipt'
-#     # raise Exception('PROJECT_ID must be not null, please set a value to the FIREBASE_PROJECT_ID environment variable')
-
-class EnvironmentConfig:
-    def __init__(self):
-        self.project_id = os.getenv('FIREBASE_PROJECT_ID')
-        self.file_path = os.getenv('FIREBASE_SERVICE_ACCOUNT_FILE')
-        if self.file_path is None:   
-            self.file_path = './service-account.json'
-        if self.project_id is None:
-            self.project_id = 'memo-receipt'
-            # raise Exception('PROJECT_ID must be not null, please set a value to the FIREBASE_PROJECT_ID environment variable')
 
 class RemoteConfigController:
 
-    def __init__(self) -> None:
+    def __init__(self):
+        self.config = EnvironmentConfig()
         self.base_url = 'https://firebaseremoteconfig.googleapis.com'
-        self.remote_config_endpoint = 'v1/projects/' + PROJECT_ID + '/remoteConfig'
+        self.remote_config_endpoint = 'v1/projects/' + self.config.project_id + '/remoteConfig'
         self.remote_config_url = self.base_url + '/' + self.remote_config_endpoint
         self.scopes = ['https://www.googleapis.com/auth/firebase.remoteconfig']
 
@@ -39,7 +21,7 @@ class RemoteConfigController:
         :return: Access token.
         """
         credentials = ServiceAccountCredentials.from_json_keyfile_name(
-            FILE_PATH, self.scopes)
+            self.config.file_path, self.scopes)
         access_token_info = credentials.get_access_token()
         return access_token_info.access_token
     # [END retrieve_access_token]
@@ -73,7 +55,7 @@ class RemoteConfigController:
             app_config['current'] = new_version
         return app_config_list
 
-    def _update_current_version_by_platform(self, app_config_list, platform=None,new_version=None):
+    def _update_current_version_by_platform(self, app_config_list,new_version=None, platform=None,):
         """ Change the current version data to a new one restricted by an O.S
         Args:
             app_config_list: A dictionary with all the app config list data
@@ -124,7 +106,7 @@ class RemoteConfigController:
             print(f'> [Company: {id}] Updating the accepted version from {old_version} version to: {new_version} \n')
         return app_config_list
 
-    def _update_accepted_version_by_platform(self, app_config_list, platform=None,new_version=None):
+    def _update_accepted_version_by_platform(self, app_config_list, new_version=None, platform=None,):
         """ Change the accepted version data to a new one restricted by an O.S
         Args:
             app_config_list: A dictionary with all the app config list data
@@ -138,7 +120,7 @@ class RemoteConfigController:
         for id in app_config_list:
             print('id: ', id)
             app_config = app_config_list[id]
-            old_version = app_config['accepted`']
+            old_version = app_config['accepted']
 
             if(platform == 'ios'):
                 old_ios_version = app_config['accepted_ios_version']
@@ -217,7 +199,7 @@ class RemoteConfigController:
         # isolating the current app config list
         app_config_list = self._get_app_config_list(old_remote)
         # generating the new list with the updated current version
-        new_config_list = self._update_curre0nt_version_by_platform(app_config_list, new_current_version, platform)
+        new_config_list = self._update_current_version_by_platform(app_config_list, new_current_version, platform)
         # calling update to all remote config
         self._add_data_to_remote_config(data_to_upload = new_config_list, remote_list = old_remote, version = new_current_version)
 
@@ -232,6 +214,7 @@ class RemoteConfigController:
         # isolating the current app config list
         app_config_list = self._get_app_config_list(old_remote)
         # generating the new list with the updated current version
-        new_config_list = self._update_all_accepted_version(app_config_list, new_current_version)
+        # new_config_list = self._update_all_accepted_version(app_config_list, new_current_version)
+        new_config_list = self._update_accepted_version_by_platform(app_config_list, new_current_version, platform)
         # calling update to all remote config
         self._add_data_to_remote_config(data_to_upload = new_config_list, remote_list = old_remote, version = new_current_version)
