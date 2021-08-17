@@ -5,13 +5,24 @@ import json
 
 from oauth2client.service_account import ServiceAccountCredentials
 
-PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID')
-FILE_PATH = os.getenv('FIREBASE_SERVICE_ACCOUNT_FILE')
+# PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID')
+# FILE_PATH = os.getenv('FIREBASE_SERVICE_ACCOUNT_FILE')
 
-if FILE_PATH is None:   
-        FILE_PATH = './service-account.json'
-if PROJECT_ID is None:
-    raise Exception('PROJECT_ID must be not null, please set a value to the FIREBASE_PROJECT_ID environment variable')
+# if FILE_PATH is None:   
+#     FILE_PATH = './service-account.json'
+# if PROJECT_ID is None:
+#     PROJECT_ID = 'memo-receipt'
+#     # raise Exception('PROJECT_ID must be not null, please set a value to the FIREBASE_PROJECT_ID environment variable')
+
+class EnvironmentConfig:
+    def __init__(self):
+        self.project_id = os.getenv('FIREBASE_PROJECT_ID')
+        self.file_path = os.getenv('FIREBASE_SERVICE_ACCOUNT_FILE')
+        if self.file_path is None:   
+            self.file_path = './service-account.json'
+        if self.project_id is None:
+            self.project_id = 'memo-receipt'
+            # raise Exception('PROJECT_ID must be not null, please set a value to the FIREBASE_PROJECT_ID environment variable')
 
 class RemoteConfigController:
 
@@ -33,7 +44,7 @@ class RemoteConfigController:
         return access_token_info.access_token
     # [END retrieve_access_token]
 
-    def _get_app_config_list(remote_config):
+    def _get_app_config_list(self, remote_config):
         """ "filtering" the dict to return only the App Config list from the all the remote data 
         Args:
             remote_config: A dictionary with all the remote config data
@@ -42,7 +53,7 @@ class RemoteConfigController:
         app_config_list = json.loads(remote_config['parameters']['app_config']['defaultValue']['value'])
         return app_config_list
     
-    def _update_all_current_version(app_config_list, new_version=None):
+    def _update_all_current_version(self, app_config_list, new_version=None):
         """ Change the current version data to a new one 
         Args:
             app_config_list: A dictionary with all the app config list data
@@ -73,7 +84,7 @@ class RemoteConfigController:
         if new_version is None:
             raise Exception('new_version must be not null')
         if platform is None:
-            return self.update_all_current_version(app_config_list, new_version)
+            return self._update_all_current_version(app_config_list, new_version)
         for id in app_config_list:
             print('id: ', id)
             app_config = app_config_list[id]
@@ -85,9 +96,11 @@ class RemoteConfigController:
                 old_android_version = app_config['current_android_version']
                 app_config['current_android_version'] = new_version
                 print(f'> [Company: {id}] Updating the current version from {old_android_version} version to: {new_version} \n')
+            elif(platform == 'both'):
+                self._update_all_current_version(app_config_list, new_version)
         return app_config_list
 
-    def _update_all_accepted_version(app_config_list, new_version=None):
+    def _update_all_accepted_version(self, app_config_list, new_version=None):
         """ Change the accepted version data to a new one 
         Args:
             app_config_list: A dictionary with all the app config list data
@@ -121,7 +134,7 @@ class RemoteConfigController:
         if new_version is None:
             raise Exception('new_version must be not null')
         if platform is None:
-            return self.update_all_accepted_version(app_config_list, new_version)
+            return self._update_all_accepted_version(app_config_list, new_version)
         for id in app_config_list:
             print('id: ', id)
             app_config = app_config_list[id]
@@ -137,10 +150,12 @@ class RemoteConfigController:
                 print('> current:', old_version)
                 app_config['accepted_android_version'] = new_version
                 print(f'> [Company: {id}] Updating the accepted version from {old_android_version} version to: {new_version} \n')
+            elif(platform == 'both'):
+                return self._update_all_accepted_version(app_config_list, new_version)
         return app_config_list
 
 
-    def _publish(self, remote_config_list, version):
+    def _publish(self, remote_config_list):
         """Publish local template to Firebase server.
         Args:
             remote_config_list: The remote config, used to update the previous one in the server
@@ -170,7 +185,7 @@ class RemoteConfigController:
             raise Exception('function data must be not null')
         remote_list['parameters']['app_config']['defaultValue']['value'] = json.dumps(data_to_upload)
         print('calling update to all remote config')
-        self._publish(remote_list, version)
+        self._publish(remote_list)
 
     def _get_remote_list(self):
         """Retrieve the current Firebase Remote Config template from server.
@@ -202,9 +217,9 @@ class RemoteConfigController:
         # isolating the current app config list
         app_config_list = self._get_app_config_list(old_remote)
         # generating the new list with the updated current version
-        new_config_list = self._update_all_current_version(app_config_list, new_current_version)
+        new_config_list = self._update_curre0nt_version_by_platform(app_config_list, new_current_version, platform)
         # calling update to all remote config
-        self._add_data_to_remote_config(data_to_upload = new_config_list, remote_list = old_remote, version= new_current_version)
+        self._add_data_to_remote_config(data_to_upload = new_config_list, remote_list = old_remote, version = new_current_version)
 
     def set_all_accepted_version(self, new_current_version, platform=None): 
         """Orchestrator to get the current remote config. 
